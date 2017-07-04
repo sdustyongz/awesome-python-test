@@ -10,8 +10,9 @@ import markdown2
 from transwarp.web import get, post, ctx, view, interceptor, seeother, notfound
 
 from apis import api, Page, APIError, APIValueError, APIPermissionError, APIResourceNotFoundError
-from models import User
+from models import User,TestCaseDetail
 from config import configs
+from pyhessian.client import HessianProxy
 
 _COOKIE_NAME = 'awesession'
 _COOKIE_KEY = configs.session.secret
@@ -175,3 +176,66 @@ def api_get_users():
     for u in users:
         u.password = '******'
     return dict(users=users, page=page)
+
+
+
+
+
+@view('services.html')
+@post('/service/create')
+def addservice():
+     i = ctx.request.input(name='', serviceType=1, serviceUrl='',parameter="")
+     name = i.name.strip()
+     serviceType = i.serviceType.strip()
+     serviceUrl = i.serviceUrl.strip()
+     parameter=i.parameter.strip()
+     tc=TestCaseDetail(name=name,serviceType=serviceType,serviceUrl=serviceUrl,parameter=parameter)
+     tc.insert()
+     results=TestCaseDetail.find_by(" where is_delete!=1 ")
+     return dict(services=results)
+
+
+
+@api
+@get('/api/services')
+def services():
+    format = ctx.request.get('format', '')
+    blogs, page = _get_services_by_page()
+    if format=='html':
+        for blog in blogs:
+            blog.content = markdown2.markdown(blog.content)
+    return dict(services=blogs, page=page)
+
+@api
+@get('/api/services/:serviceId/delete')
+def delService(serviceId):
+    testcase = TestCaseDetail.get(serviceId)
+    if testcase is None:
+        raise APIResourceNotFoundError('Blog')
+    testcase.delete()
+    return dict(id=serviceId)
+
+@view('services.html')
+@get('/services/list')
+def serviceList():
+    return dict(page_index=_get_page_index(), user=ctx.request.user)
+
+@api
+@post('/service/run/:serviceId')
+def serviceRun(serviceId):
+    testcase = TestCaseDetail.get(serviceId)
+    if testcase is None:
+        raise APIResourceNotFoundError('Blog')
+    if testcase.service_type==1:
+        service = HessianProxy(r"http://localhost:8080/hessian/htSettlementBasicService")
+        #reqParam = eval(testcase.parameter)
+        eval("service."+testcase.name+"("+testcase.parameter+")")
+    return dict()
+
+
+
+def _get_services_by_page():
+    total = TestCaseDetail.count_by(" where is_delete!=1 ")
+    page = Page(total, _get_page_index())
+    servies = TestCaseDetail.find_by('where is_delete!=1 limit ?,?', page.offset, page.limit)
+    return servies, page
