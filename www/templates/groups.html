@@ -1,0 +1,68 @@
+{% extends '__base__.html' %}
+
+{% block title %}接口{% endblock %}
+
+{% block beforehead %}
+
+<script>
+
+function initVM(data) {
+    $('#div-blogs').show();
+    var vm = new Vue({
+        el: '#div-blogs',
+        data: {
+            groups: data.groups,
+            page: data.page
+        },
+        methods: {
+            previous: function () {
+                gotoPage(this.page.page_index - 1);
+            },
+            next: function () {
+                gotoPage(this.page.page_index + 1);
+            },
+            edit_group: function (blog) {
+                location.assign('/service/run/' + blog.id);
+            },
+            delete_group: function (blog) {
+                showConfirm('确认删除？', '确认要删除“' + blog.name + '”？删除后不可恢复！', function () {
+                    postApi('/api/blogs/' + blog.id + '/delete', {}, function (err, r) {
+                        if (err) {
+                            return showError(err);
+                        }
+                        location.reload();
+                    });
+                });
+            }
+        }
+    });
+}
+
+$(function() {
+    getApi('/api/groups?page={{ page_index }}', function (err, results) {
+        if (err) {
+            return showError(err);
+        }
+        $('#div-loading').hide();
+        initVM(results);
+    });
+});
+
+</script>
+
+{% endblock %}
+
+{% block content %}
+
+    <div id="div-blogs" class="uk-width-1-1" style="display:none">
+        <a href="/group/create" class="uk-button uk-button-primary"><i class="uk-icon-plus"></i> 新增分组</a>
+         <ul class="uk-list"  v-repeat="group:groups">
+            <li><span v-text="group.name"></span>---<span v-text="group.domain_url"> </span> <a href="#0" v-on="click:edit_group(group)"><i class="uk-icon-edit"></i></a>
+                        <a href="#0" v-on="click:delete_group(group)"><i class="uk-icon-trash-o"></i></a></span></li>
+          </ul>
+    </div>
+
+ <div id="div-loading" class="uk-width-1-1 uk-text-center">
+        <span><i class="uk-icon-spinner uk-icon-medium uk-icon-spin"></i> 正在加载...</span>
+    </div>
+{% endblock %}

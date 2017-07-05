@@ -10,9 +10,10 @@ import markdown2
 from transwarp.web import get, post, ctx, view, interceptor, seeother, notfound
 
 from apis import api, Page, APIError, APIValueError, APIPermissionError, APIResourceNotFoundError
-from models import User,TestCaseDetail
+from models import User,TestCaseDetail,TestCaseGroup
 from config import configs
 from pyhessian.client import HessianProxy
+import json
 
 _COOKIE_NAME = 'awesession'
 _COOKIE_KEY = configs.session.secret
@@ -226,16 +227,71 @@ def serviceRun(serviceId):
     testcase = TestCaseDetail.get(serviceId)
     if testcase is None:
         raise APIResourceNotFoundError('Blog')
+    rs= dict()
     if testcase.service_type==1:
-        service = HessianProxy(r"http://localhost:8080/hessian/htSettlementBasicService")
+        service = HessianProxy(testcase.service_url)
         #reqParam = eval(testcase.parameter)
-        eval("service."+testcase.name+"("+testcase.parameter+")")
-    return dict()
+        parameter=testcase.parameter
+        result=''
+        result=eval("service."+testcase.name+"(parameter)")
+        print result
+        rs.update(result.__dict__)
+        return json.dumps(rs)
 
+@view('service_edit.html')
+@get('/service/create')
+def service_create():
+    return dict(id=None, action='/api/blogs', redirect='/services/list', user=ctx.request.user)
+
+
+@view('groups.html')
+@get('/group/list')
+def grouplist():
+    return dict(page_index=_get_page_index(), user=ctx.request.user)
+
+
+@api
+@get('/api/groups')
+def groups():
+    format = ctx.request.get('format', '')
+    blogs, page = _get_groups_by_page()
+    if format=='html':
+        for blog in blogs:
+            blog.content = markdown2.markdown(blog.content)
+    return dict(groups=blogs, page=page)
+
+@view('group_edit.html')
+@get('/group/create')
+def group_create():
+    return dict(id=None,action='/group/add', redirect='/group/list', user=ctx.request.user)
+
+@api
+@post('/group/add')
+def addservice():
+     i = ctx.request.input(name='', domianUrl='')
+     name = i.name.strip()
+     domainUrl = i.domianUrl.strip()
+     tc=TestCaseGroup(name=name,domain_url=domainUrl)
+     tc.insert()
+     return tc
+
+@api
+@post('/api/group/:groupId')
+def group_detail(groupId):
+    tg=TestCaseGroup.get(groupId)
+    if tg:
+        return tg
+    raise APIResourceNotFoundError('Blog')
 
 
 def _get_services_by_page():
     total = TestCaseDetail.count_by(" where is_delete!=1 ")
     page = Page(total, _get_page_index())
     servies = TestCaseDetail.find_by('where is_delete!=1 limit ?,?', page.offset, page.limit)
+    return servies, page
+
+def _get_groups_by_page():
+    total = TestCaseGroup.count_by(" where is_delete!=1 ")
+    page = Page(total, _get_page_index())
+    servies = TestCaseGroup.find_by('where is_delete!=1 limit ?,?', page.offset, page.limit)
     return servies, page

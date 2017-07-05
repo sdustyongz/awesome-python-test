@@ -30,6 +30,7 @@ class TestCaseGroup(Model):
     __table__ = 't_group'
     id = IntegerField(primary_key=True)
     name = StringField(updatable=False, ddl='varchar(50)',name="name")
+    domain_url=StringField(updatable=False, ddl='varchar(50)',name="domain_url")
     isDelete=IntegerField(name="is_delete")
     addTime = FloatField(updatable=False, default=time.time,name="add_time")
 class TestCaseDetail(Model):
