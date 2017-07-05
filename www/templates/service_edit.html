@@ -56,7 +56,7 @@ $(function () {
     initVue({
         name: '',
         serviceType: 2,
-        parameter:''
+        parameter:'',
     });
 });
 
@@ -91,6 +91,15 @@ $(function () {
                 <label class="uk-form-label">参数:</label>
                 <div class="uk-form-controls">
                     <input v-model="parameter" name="parameter" type="text"  class="uk-width-1-1">
+                </div>
+            </div>
+             <div class="uk-form-row">
+                <label class="uk-form-label">分组</label>
+                <div class="uk-form-controls">
+                    <select v-model="serviceType" name="serviceType">
+                         <option value="1">hessian</option>
+                        <option value="2">http</option>
+                    </select>
                 </div>
             </div>
              <div class="uk-form-row">
